@@ -33,11 +33,21 @@ func main() {
 	fmt.Printf("Phone number: %s\n", phoneNumber)
 
 	// Reverse phone number lookup
-	if phoneInfo := reverseLookup(phoneNumber); phoneInfo != nil {
-		fmt.Printf("Country code: %s\n", phoneInfo.CountryCode)
-		fmt.Printf("National number: %s\n", phoneInfo.NationalNumber)
-		fmt.Printf("Carrier: %s\n", phoneInfo.Carrier)
-		fmt.Printf("Line type: %s\n", phoneInfo.LineType)
+	func reversePhoneNumberLookup(phoneNumber string, config Config) map[string]interface{} {
+    fmt.Println("Performing reverse phone number lookup...")
+
+    client := twilio.NewClient(config.TwilioAccountSid, config.TwilioAuthToken, nil)
+    resp, err := client.LookupsV1.PhoneNumbers(phoneNumber).Fetch(nil)
+    if err != nil {
+        return nil
+    }
+
+    var result map[string]interface{}
+    json.Unmarshal([]byte(resp.RawResponse), &result)
+
+    return result
+}
+
 	}
 
 	// Phone number validation
