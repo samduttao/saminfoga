@@ -1,5 +1,7 @@
 {
-  "telnyx_api_key": "your_telnyx_api_key",
+  "twilio_account_sid": "your_twilio_account_sid",
+  "twilio_auth_token": "your_twilio_auth_token",
   "numverify_api_key": "your_numverify_api_key",
   "ipgeolocation_api_key": "your_ipgeolocation_api_key"
 }
+
