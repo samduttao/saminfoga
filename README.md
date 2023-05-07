@@ -1,5 +1,3 @@
-# A first-level heading
-
 # saminfoga 🕵️‍♂️
 
 saminfoga is a command-line tool for gathering information about phone numbers. It uses various APIs to perform reverse phone number lookups, phone number validation, spam call detection, IP address lookup, geolocation lookup, and social media lookup.
