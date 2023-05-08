@@ -26,18 +26,21 @@ $ saminfoga +14155552671
 
 Some of the APIs used by saminfoga require API keys. You can obtain free API keys from the following websites:
 
-- Telnyx (for reverse phone number lookup): https://developers.telnyx.com/docs/v2/anonymous-phone-number-lookup/lookup-phone-numbers
+- Twilio (for reverse phone number lookup)
+https://www.twilio.com/docs/lookup/api
 - NumVerify (for phone number validation): https://numverify.com/dashboard
 - IPGeolocation (for IP address lookup and geolocation lookup): https://ipgeolocation.io/signup.html
 
 After obtaining the API keys, add them to the `config.json` file in the following format:
 
 ```json
-{
-  "telnyx_api_key": "your_telnyx_api_key",
-  "numverify_api_key": "your_numverify_api_key",
-  "ipgeolocation_api_key": "your_ipgeolocation_api_key"
-}
+{ 
+   "twilio_account_sid": "your_twilio_account_sid", 
+   "twilio_auth_token": "your_twilio_auth_token", 
+   "numverify_api_key": "your_numverify_api_key", 
+   "ipgeolocation_api_key": "your_ipgeolocation_api_key" 
+ } 
+ 
 ```
 
 ## Credits
