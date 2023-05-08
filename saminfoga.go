@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -10,161 +11,168 @@ import (
 	"strings"
 )
 
-type PhoneInfo struct {
-	CountryCode    string `json:"country_code"`
-	NationalNumber string `json:"national_number"`
-	Carrier        string `json:"carrier"`
-	LineType       string `json:"line_type"`
+// Struct to hold the API keys
+type Config struct {
+	NumVerifyApiKey      string `json:"numverify_api_key"`
+	TwilioAccountSid     string `json:"twilio_account_sid"`
+	TwilioAuthToken      string `json:"twilio_auth_token"`
+	TwilioLookupApiUrl   string `json:"twilio_lookup_api_url"`
+	IPGeolocationApiKey  string `json:"ipgeolocation_api_key"`
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: go run main.go <phone number>")
-		return
+	// Parse command-line arguments
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 1 {
+		fmt.Println("Usage: saminfoga <phone number>")
+		os.Exit(1)
+	}
+	phoneNumber := args[0]
+
+	// Load API keys from config.json file
+	configFile, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		fmt.Println("Error reading config file:", err)
+		os.Exit(1)
+	}
+	var config Config
+	err = json.Unmarshal(configFile, &config)
+	if err != nil {
+		fmt.Println("Error parsing config file:", err)
+		os.Exit(1)
 	}
 
+	// Validate phone number using NumVerify API
+	fmt.Println("Validating phone number...")
+	numVerifyResp, err := http.Get(fmt.Sprintf("http://apilayer.net/api/validate?access_key=%s&number=%s&country_code=&format=1", config.NumVerifyApiKey, phoneNumber))
+	if err != nil {
+		fmt.Println("Error calling NumVerify API:", err)
+		os.Exit(1)
+	}
+	defer numVerifyResp.Body.Close()
+	numVerifyBody, err := ioutil.ReadAll(numVerifyResp.Body)
+	if err != nil {
+		fmt.Println("Error reading NumVerify API response:", err)
+		os.Exit(1)
+	}
+	var numVerifyResult map[string]interface{}
+	err = json.Unmarshal(numVerifyBody, &numVerifyResult)
+	if err != nil {
+		fmt.Println("Error parsing NumVerify API response:", err)
+		os.Exit(1)
+	}
+	if numVerifyResult["valid"].(bool) == false {
+		fmt.Println("Invalid phone number.")
+		os.Exit(1)
+	}
+
+	// Get carrier information using Twilio Lookup API
+	fmt.Println("Getting carrier information...")
+	twilioClient := &http.Client{}
+	twilioReq, err := http.NewRequest("GET", config.TwilioLookupApiUrl, nil)
+	if err != nil {
+		fmt.Println("Error creating Twilio Lookup API request:", err)
+		os.Exit(1)
+	}
+	twilioReq.SetBasicAuth(config.TwilioAccountSid, config.TwilioAuthToken)
+	q := twilioReq.URL.Query()
+	q.Add("PhoneNumber", phoneNumber)
+	twilioReq.URL.RawQuery = q.Encode()
+	twilioResp, err := twilioClient.Do(twilioReq)
+	if err != nil {
+		fmt.Println("Error calling Twilio Lookup API:", err)
+		os.Exit(1)
+	}
+	defer twilioResp.Body.Close()
+	twilioBody, err := ioutil.ReadAll(twilioResp.Body)
+	if err != nil {
+		fmt.Println("Error reading Twilio Lookup API response:", err)
+		os.Exit(1)
+	}
+	var twilioResult map[string]interface{}
+	err = json.Unmarshal(twilioBody, &twilioResult)
+	if err != nil {
+		fmt.Println("Error parsing Twilio Lookup API response:", err)
+		os.Exit(1)
+	}
+	if twilioResult["carrier"] != nil {
+result["carrier"] = twilioResult["carrier"].(map[string]interface{})["name"]
+} else {
+result["carrier"] = "N/A"
+}
+	func main() {
+	// Parse command line arguments
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: saminfoga <phone number>")
+		fmt.Println("Example: saminfoga +14155552671")
+		return
+	}
 	phoneNumber := os.Args[1]
 
-	if !isValidPhoneNumber(phoneNumber) {
-		fmt.Println("Invalid phone number!")
+	// Load API keys from config file
+	config, err := loadConfig()
+	if err != nil {
+		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("Phone number: %s\n", phoneNumber)
-
-	// Reverse phone number lookup
-	func reversePhoneNumberLookup(phoneNumber string, config Config) map[string]interface{} {
-    fmt.Println("Performing reverse phone number lookup...")
-
-    client := twilio.NewClient(config.TwilioAccountSid, config.TwilioAuthToken, nil)
-    resp, err := client.LookupsV1.PhoneNumbers(phoneNumber).Fetch(nil)
-    if err != nil {
-        return nil
-    }
-
-    var result map[string]interface{}
-    json.Unmarshal([]byte(resp.RawResponse), &result)
-
-    return result
-}
-
-	}
-
-	// Phone number validation
-	if result := validatePhoneNumber(phoneNumber); result["valid"].(bool) {
-		fmt.Println("Phone number is valid!")
-	} else {
-		fmt.Println("Phone number is invalid!")
-	}
-
-	// Spam call detection
-	if isSpam(phoneNumber) {
-		fmt.Println("This is a spam call!")
-	} else {
-		fmt.Println("This is not a spam call.")
-	}
-
-	// IP address lookup
-	if ip, err := getIPAddress(phoneNumber); err == nil {
-		fmt.Printf("IP address: %s\n", ip)
-
-		// Geolocation lookup
-		if geoInfo, err := getGeolocation(ip); err == nil {
-			fmt.Printf("Geolocation: %s\n", geoInfo)
-		}
-	}
-
-	// Social media lookup
-	if socialMediaInfo := getSocialMediaInfo(phoneNumber); len(socialMediaInfo) > 0 {
-		fmt.Println("Social media accounts:")
-		for platform, account := range socialMediaInfo {
-			fmt.Printf("- %s: %s\n", platform, account)
-		}
-	} else {
-		fmt.Println("No social media accounts found.")
-	}
-}
-
-func isValidPhoneNumber(phoneNumber string) bool {
-	// Check if the phone number matches the E.164 format
-	valid, err := regexp.MatchString(`^\+?[1-9]\d{1,14}$`, phoneNumber)
-	return err == nil && valid
-}
-
-func reverseLookup(phoneNumber string) *PhoneInfo {
-	fmt.Println("Performing reverse phone number lookup...")
-	resp, err := http.Get(fmt.Sprintf("https://api.telnyx.com/anonymous/v2/number_lookup/%s", phoneNumber))
-	if err != nil {
-		return nil
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil
-	}
-	var phoneInfo PhoneInfo
-	err = json.Unmarshal(body, &phoneInfo)
-	if err != nil {
-		return nil
-	}
-	return &phoneInfo
-}
-
-func validatePhoneNumber(phoneNumber string) map[string]interface{} {
+	// Perform phone number validation
 	fmt.Println("Performing phone number validation...")
-	resp, err := http.Get(fmt.Sprintf("https://numvalidate.com/api/validate?number=%s", phoneNumber))
+	valid, err := validatePhoneNumber(phoneNumber, config.NumverifyAPIKey)
 	if err != nil {
-		return nil
+		fmt.Println(err)
+		return
 	}
-	defer resp.Body.Close()
-func getTwitterUsername(html string) string {
-	re := regexp.MustCompile(`https://twitter.com/([^/]+)/`)
-	match := re.FindStringSubmatch(html)
-	if len(match) > 1 {
-		return match[1]
+	if !valid {
+		fmt.Println("Invalid phone number")
+		return
 	}
-	return ""
-}
 
-func getInstagramUsername(html string) string {
-	re := regexp.MustCompile(`https://www.instagram.com/([^/]+)/`)
-	match := re.FindStringSubmatch(html)
-	if len(match) > 1 {
-		return match[1]
+	// Perform spam call check
+	fmt.Println("Performing spam call check...")
+	spam, err := checkSpamCall(phoneNumber, config.TwilioAPIURL, config.TwilioAccountSID, config.TwilioAuthToken)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
-	return ""
-}
-
-func getFacebookUsername(html string) string {
-	re := regexp.MustCompile(`https://www.facebook.com/([^/]+)/`)
-	match := re.FindStringSubmatch(html)
-	if len(match) > 1 {
-		return match[1]
+	if spam {
+		fmt.Println("Spam call detected")
+		return
 	}
-	return ""
-}
 
-func getSocialMediaInfo(phoneNumber string) map[string]string {
+	// Perform reverse phone number lookup
+	fmt.Println("Performing reverse phone number lookup...")
+	name, address, err := reverseLookup(phoneNumber, config.TelnyxAPIURL, config.TelnyxAPIKey)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("Name: %s\n", name)
+		fmt.Printf("Address: %s\n", address)
+	}
+
+	// Perform IP address and geolocation lookup
+	fmt.Println("Performing IP address and geolocation lookup...")
+	ip, location, err := lookupIPAndLocation(phoneNumber, config.IPGeolocationAPIURL, config.IPGeolocationAPIKey)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("IP address: %s\n", ip)
+		fmt.Printf("Location: %s\n", location)
+	}
+
+	// Perform social media lookup
 	fmt.Println("Performing social media lookup...")
-	socialMediaInfo := make(map[string]string)
-
-	// Twitter lookup
-	html := getHTML(fmt.Sprintf("https://www.google.com/search?q=%s+twitter", phoneNumber))
-	if username := getTwitterUsername(html); username != "" {
-		socialMediaInfo["Twitter"] = username
+	html, err := socialMediaLookup(phoneNumber)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		username := getTwitterUsername(html)
+		if username != "" {
+			fmt.Printf("Twitter username: %s\n", username)
+		} else {
+			fmt.Println("Twitter username not found")
+		}
 	}
-
-	// Instagram lookup
-	html = getHTML(fmt.Sprintf("https://www.google.com/search?q=%s+instagram", phoneNumber))
-	if username := getInstagramUsername(html); username != "" {
-		socialMediaInfo["Instagram"] = username
-	}
-
-	// Facebook lookup
-	html = getHTML(fmt.Sprintf("https://www.google.com/search?q=%s+facebook", phoneNumber))
-	if username := getFacebookUsername(html); username != "" {
-		socialMediaInfo["Facebook"] = username
-	}
-
-	return socialMediaInfo
 }
+
